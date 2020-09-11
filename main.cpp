@@ -2,10 +2,10 @@
 #include <functional>
 #include <cmath>
 
+// Консольные сообщения
 const std::string MAIN_MESSAGE = std::string("Choose a config option:\n\t1 - Set objective function\n") +
                                  "\t2 - Set integration method\n\t3 - Set integration step & range\n" +
                                  "\t4 - Calculate result\n\t5 - Quit\n";
-
 const std::string FUNCTION_SELECTION_MESSAGE = std::string("\t1 - sin\n") + "\t2 - cos\n" + "\t3 - x\n" + "\t4 - x^2\n";
 const std::string METHOD_SELECTION_MESSAGE = std::string("\t1 - trapezoidal\n\t2 - rectangle\n");
 const std::string RANGE_MESSAGE = std::string("Enter the start and the end of the integration interval:\n");
@@ -14,6 +14,8 @@ const std::string ANSWER_MESSAGE = std::string("The result of integration with s
 const std::string WRONG_COMMAND_MESSAGE = std::string("Wrong command!\n");
 const std::string END_MESSAGE = std::string("Bye!\n");
 
+
+// Функция интегрирования методом прямоугольников
 double rectangleIntegral(double start, double end, double step, std::function<double (double)> f) {
     if (end - start < step) {
         step = end - start;
@@ -31,6 +33,7 @@ double rectangleIntegral(double start, double end, double step, std::function<do
     return answer;
 }
 
+// Функция интегрирования методом трапеции
 double trapezoidalIntegral(double start, double end, double step, std::function<double (double)> f) {
     if (end - start < step) {
         step = end - start;
@@ -48,6 +51,7 @@ double trapezoidalIntegral(double start, double end, double step, std::function<
     return answer;
 }
 
+// Исключение неправильно введенного кода функции
 class ObjFuncException: public std::exception {
 private:
     std::string m_error;
@@ -59,6 +63,7 @@ public:
     const char* what() const noexcept { return m_error.c_str(); }
 };
 
+// Исключение неправильно введенного кода метода
 class IntegrationMethodException: public std::exception {
 private:
     std::string m_error;
@@ -70,9 +75,23 @@ public:
     const char* what() const noexcept { return m_error.c_str(); }
 };
 
+// Исключение неполного набора параметров
+class IncompleteConfigurationException: public std::exception {
+private:
+    std::string m_error;
+public:
+    IncompleteConfigurationException(std::string parametrName){
+        m_error = std::string("Not all parameters are specified(") + parametrName+  ")!\n";
+    }
 
+    const char* what() const noexcept { return m_error.c_str(); }
+};
+
+// Класс конфигурации и запуска вычисления интеграла функции
 class Integrator {
 public:
+
+    // Задает фунцию для интегрирования по ее коду
     void setObjectiveFunc(int type) {
         switch (type) {
             case 1: {
@@ -96,6 +115,8 @@ public:
             }
         }
     }
+
+    // Задает метод интегрирования по его коду
     void setMethod(int method) {
         switch(method) {
             case 1: {
@@ -111,9 +132,13 @@ public:
             }
         }
     }
+
+    // Задает шаг интегрирования
     void setStep(double step) {
         this->step = step;
     }
+
+    // Задает интервал интегрирования
     void setRange(double start, double end) {
         if(start > end) {
             double tmp = start;
@@ -123,7 +148,18 @@ public:
         this->start = start;
         this->end = end;
     }
+
+    // Функция вычисления интеграла с заданными конфигурациями
     double calculate() {
+        if (objectiveFunc == NULL){
+            throw IncompleteConfigurationException("objective function");
+        }
+        if (methodFunction == NULL){
+            throw IncompleteConfigurationException("method");
+        }
+        if (step == 0){
+            throw IncompleteConfigurationException("step");
+        }
         if (start == end) {
             return 0;
         }
@@ -134,13 +170,14 @@ public:
     }
 private:
     std::function<double(double)> objectiveFunc = NULL;
-    std::function<double(double, double, double, std::function<double(double)>)> methodFunction;
-    double step;
-    double start;
-    double end;
+    std::function<double(double, double, double, std::function<double(double)>)> methodFunction = NULL;
+    double step = NULL;
+    double start = 0;
+    double end = 0;
 };
 
 int main(int argc, char *argv[]) {
+    std::cout << (0.0 == NULL);
     int ch;
     Integrator integrator = Integrator();
     while(true) {
@@ -180,8 +217,14 @@ int main(int argc, char *argv[]) {
                 break;
             }
             case 4:{
-                double answer = integrator.calculate();
-                std::cout << ANSWER_MESSAGE << answer << std::endl;
+                double answer;
+                try {
+                    answer = integrator.calculate();
+                    std::cout << ANSWER_MESSAGE << answer << std::endl;
+                }catch(const IncompleteConfigurationException e) {
+                    std::cerr << e.what();
+                }
+
                 break;
             }
             case 5:{
